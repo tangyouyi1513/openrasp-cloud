@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package proto;
+
+// Interface exported by the server.
+service OpenRASP {
+
+    // 心跳请求
+    rpc HeartBeat (stream HeartBeatInfo) returns (stream UpdateInfo) {
+    }
+
+    // 注册agent
+    rpc Register (Agent) returns (RegistrationResponse) {
+    }
+
+    // 添加 Rasp
+    rpc AddRasp (Rasp) returns (AddRaspResponse) {
+    }
+
+}
+
+// 升级信息
+message UpdateInfo {
+    uint64 id = 1;
+    PropertiesConf propertiesConf = 2;
+    Log4jConf log4jConf = 3;
+    repeated Plugin plugins = 4;
+}
+
+// Agent信息
+message Agent {
+    string hostName = 6;
+    string os = 8;
+}
+
+// rasp 信息
+message Rasp {
+    string id = 1;
+    uint32 uid = 9;
+    uint32 gid = 2;
+    uint32 euid = 3;
+    string userName = 4;
+    // RASP 类型
+    enum RaspType {
+        JAVA = 0;
+        PHP = 1;
+    }
+    RaspType type = 5;
+    string version = 6;
+    // 框架类型
+    string frameWorkType = 7;
+    // 框架版本
+    string frameWorkVersion = 8;
+}
+
+// update 结果
+message UpdateResult {
+    uint64 updateId = 1;
+    bool isSuccess = 2;
+    string message = 3;
+}
+
+// Agent注册返回信息
+message RegistrationResponse {
+    string token = 1;
+}
+
+// 添加Rasp的返回信息
+message AddRaspResponse {
+    bool isSuccess = 1;
+    //添加失败的话 失败信息
+    string message = 2;
+}
+
+// 心跳信息
+message HeartBeatInfo {
+    repeated Rasp rasps = 1;
+}
+
+// js插件
+message Plugin {
+    string name = 1;
+    bytes content = 2;
+}
+
+// properties 配置
+message PropertiesConf {
+    bytes content = 1;
+}
+
+// log4j 配置
+message Log4jConf {
+    bytes content = 1;
+}
