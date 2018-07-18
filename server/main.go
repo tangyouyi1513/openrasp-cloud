@@ -14,7 +14,7 @@ func checkError(err error) {
 }
 
 func main() {
+	//logger.InitLogger()
 	grpc.InitRpc()
-	// 获取本机的MAC地址
 
 }

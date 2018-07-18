@@ -15,15 +15,5 @@ func init() {
 	defer session.Close()
 
 	session.SetMode(mgo.Monotonic, true)
-	//c := session.DB("test").C("people")
-	//err = c.Insert(&Person{"Ale", "111111"}, &Person{"Cla", "222222222"})
-	//if err != nil {
-	//	panic(err)
-	//}
-	//result := Person{}
-	//err = c.Find(bson.M{"name": "Ale"}).One(&result)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//fmt.Println("Phone:", result.Phone)
+
 }

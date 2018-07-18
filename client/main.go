@@ -7,7 +7,9 @@ import (
 )
 
 var wg sync.WaitGroup
+
 func main() {
+	//logger.InitLogger()
 	grpc.InitRpc()
 	udp.InitUDP()
 

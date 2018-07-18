@@ -2,9 +2,10 @@ package grpc
 
 import (
 	"openrasp-cloud/proto"
+	"fmt"
 )
 
-func handleHeartbeat(stream *proto.HeartBeatInfo) {
-
+func handleHeartbeat(heartbeat *proto.HeartBeatInfo) {
+	fmt.Printf("%+v",heartbeat.SumData)
 }
 

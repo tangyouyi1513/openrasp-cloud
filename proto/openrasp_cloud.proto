@@ -6,7 +6,7 @@ package proto;
 service OpenRASP {
 
     // 心跳请求
-    rpc HeartBeat (HeartBeatInfo) returns (HeartBeatResponse) {
+    rpc HeartBeat (stream HeartBeatInfo) returns (stream UpdateInfo) {
     }
 
     // 注册agent
@@ -15,10 +15,6 @@ service OpenRASP {
 
     // 添加 Rasp
     rpc AddRasp (Rasp) returns (AddRaspResponse) {
-    }
-
-    // 订阅升级信息推送
-    rpc SubscribeUpdate (Agent) returns (stream UpdateInfo) {
     }
 
 }
@@ -37,6 +33,7 @@ message Agent {
     string key = 2;
     string hostName = 6;
     string os = 8;
+    string version = 7;
 }
 
 // rasp 信息
@@ -44,7 +41,7 @@ message Rasp {
     string id = 1;
     string type = 5;
     string version = 6;
-    string javaVersion = 7;
+    string languageVersion = 7;
     string raspHome = 8;
     uint64 startTime = 9;
 }
@@ -73,8 +70,8 @@ message AddRaspResponse {
 message SumData {
     map<string, int64> block = 1;
     map<string, int64> info = 2;
-    int64 request = 3;
-    int64 hook = 4;
+    map<string, int64> hook = 3;
+    int64 request = 4;
 }
 
 // 心跳信息
@@ -94,10 +91,4 @@ message Plugin {
 message PropertiesConf {
     bytes content = 1;
 }
-
-message HeartBeatResponse {
-    bool isSuccess = 1;
-    string message = 2;
-}
-
 

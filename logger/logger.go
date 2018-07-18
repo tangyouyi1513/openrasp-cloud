@@ -11,7 +11,7 @@ import (
 	. "openrasp-cloud/config"
 )
 
-func init() {
+func InitLogger() {
 	logDir, err := tools.GetCurrentPath()
 	if err != nil {
 		log.Panicf("Failed to log to file: v%", err)

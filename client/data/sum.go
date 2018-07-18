@@ -18,21 +18,25 @@ func AddData(id string, data map[string]interface{}) {
 	}
 
 	sum := sumData[id]
-	for checkType, checkSum := range data["info_sum"].(map[string]int64) {
-		sum.Info[checkType] += checkSum
+	for checkType, checkSum := range data["info_sum"].(map[string]interface{}) {
+		sum.Info[checkType] += int64(checkSum.(float64))
 	}
 
-	for checkType, checkSum := range data["block_sum"].(map[string]int64) {
-		sum.Info[checkType] += checkSum
+	for checkType, checkSum := range data["block_sum"].(map[string]interface{}) {
+		sum.Block[checkType] += int64(checkSum.(float64))
 	}
 
-	sum.Hook += data["hook_sum"].(int64)
-	sum.Request += data["request_sum"].(int64)
+	for checkType, checkSum := range data["hook_sum"].(map[string]interface{}) {
+		sum.Hook[checkType] += int64(checkSum.(float64))
+	}
+
+	sum.Request += int64(data["request_sum"].(float64))
 }
 
 func NewSumData() *SumData {
 	return &SumData{
 		Block: make(map[string]int64),
 		Info:  make(map[string]int64),
+		Hook:  make(map[string]int64),
 	}
 }

@@ -24,12 +24,12 @@ const (
 	// 注册失败重试时间间隔
 	registerRetryDelay = 5
 	// 注册失败重试次数
-	registerRetryCount = 3
+	registerRetryCount = 100
 )
 
 var client pb.OpenRASPClient
-var updateStream pb.OpenRASP_SubscribeUpdateClient
-var isSubscribing = false
+var heartbeatStream pb.OpenRASP_HeartBeatClient
+var isConnecting = false
 var agent *pb.Agent
 
 func InitRpc() {
@@ -37,90 +37,82 @@ func InitRpc() {
 	if err != nil {
 		log.WithError(err).Panicf("failed to connect to address %s : %v", Conf.RpcAddress, err)
 	}
-	defer conn.Close()
+	//defer conn.Close()
 
 	client = pb.NewOpenRASPClient(conn)
 	register()
-	subscribeUpdate()
 	go startHeartbeat()
-	wait := make(chan struct{})
-	<-wait
+	//wait := make(chan struct{})
+	//<-wait
 }
 
 // agent 注册
 func register() {
-
-	defer func() {
-		if err := recover(); err != nil {
-			log.WithError(err.(error)).Panicf("failed to register to grpc server")
-		}
-	}()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
 	retryCount := 0
 	for retryCount < registerRetryCount {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		agent = getAgent()
 		result, err := client.Register(ctx, agent)
 		if err != nil {
-			log.WithError(err).Panicf("failed to register to grpc server")
+			log.WithError(err).Error("failed to register to grpc server")
 		} else {
 			if result.IsSuccess {
-				break
+				log.Info("success to register to grpc server")
+				cancel()
+				return
 			} else {
-				log.WithError(err).Panicf("failed to register to grpc server")
+				log.WithError(err).Error("failed to register to grpc server")
 			}
 		}
+		cancel()
 		retryCount++
 		time.Sleep(registerRetryDelay * time.Second)
 	}
-
+	if retryCount >= registerRetryCount {
+		log.Panic("failed to register to grpc server")
+	}
 	return
 }
 
-// 订阅更新推送
-func subscribeUpdate() {
-	defer func() {
-		if err := recover(); err != nil {
-			log.WithError(err.(error)).Error("heart beat failed")
-			connectUpgrade()
-		}
-	}()
-	connectUpgrade()
-	go func() {
-		updateInfo, err := updateStream.Recv()
-		if err != nil {
-			log.WithError(err).Error("failed to receive update info")
-			connectUpgrade()
-		}
-		updateRasp(updateInfo)
-	}()
-}
-
 // 建立更新推送长连接通道
-func connectUpgrade() {
-	if isSubscribing {
+func connectHeartbeat() {
+	if isConnecting {
 		return
 	}
-	isSubscribing = true
-	defer func() { isSubscribing = false }()
-	if updateStream != nil {
-		updateStream.CloseSend()
+	isConnecting = true
+	defer func() { isConnecting = false }()
+	if heartbeatStream != nil {
+		heartbeatStream.CloseSend()
 	}
-	stream, err := client.SubscribeUpdate(context.Background(), agent)
+	stream, err := client.HeartBeat(context.Background())
 
 	for err != nil {
 		log.WithError(err).Error("failed to start heartbeat, will be retry after 10 second")
-		stream, err = client.SubscribeUpdate(context.Background(), agent)
+		stream, err = client.HeartBeat(context.Background())
 		time.Sleep(10 * time.Second)
 	}
-	updateStream = stream
+	heartbeatStream = stream
 }
 
 // 开始心跳
 func startHeartbeat() {
+
 	defer func() {
 		if err := recover(); err != nil {
 			log.WithError(err.(error)).Error("heart beat failed")
+			connectHeartbeat()
+		}
+	}()
+
+	connectHeartbeat()
+	go func() {
+		for {
+			updateInfo, err := heartbeatStream.Recv()
+			if err != nil {
+				log.WithError(err).Error("failed to receive update info")
+				connectHeartbeat()
+			}
+			updateRasp(updateInfo)
 		}
 	}()
 
@@ -139,37 +131,25 @@ func AddRasp(rasp *pb.Rasp) (*pb.AddRaspResponse, error) {
 
 // 心跳
 func Heartbeat(result *pb.UpdateResult) {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
 	var err error
-	var response *pb.HeartBeatResponse
 	if result != nil {
 		// 升级结果返回心跳
-		response, err = client.HeartBeat(ctx, &pb.HeartBeatInfo{Id: agent.Id, UpdateResult: result})
+		err = heartbeatStream.Send(&pb.HeartBeatInfo{Id: agent.Id, UpdateResult: result})
 	} else {
 		// 统计信息心跳
 		sumData := <-data.Sum
 		defer func() {
 			data.Sum <- sumData
 		}()
-		response, err = client.HeartBeat(ctx, &pb.HeartBeatInfo{Id: agent.Id, SumData: sumData})
-		if err != nil {
-			return
+		err = heartbeatStream.Send(&pb.HeartBeatInfo{Id: agent.Id, SumData: sumData})
+		if err == nil {
+			sumData = make(map[string]*pb.SumData)
 		}
-	}
-
-	if response != nil {
-		if !response.IsSuccess {
-			log.Errorf("failed to send heartbeat, reconnect heartbeat %s", response.Message)
-		} else {
-			log.Info("heartbeat success")
-		}
-	} else {
-		log.WithError(err).Error("failed to send heartbeat, reconnect heartbeat")
 	}
 
 	if err != nil {
 		log.WithError(err).Error("failed to send heartbeat, reconnect heartbeat")
+		connectHeartbeat()
 	}
 
 	return
@@ -184,6 +164,7 @@ func getAgent() *pb.Agent {
 	return &pb.Agent{HostName: hostName, Os: runtime.GOOS, Id: getId()}
 }
 
+// 通过 mac 地址和当前文件夹得到id
 func getId() (id string) {
 	allMac, err := tools.GetMacAddrs()
 	if err != nil {
@@ -204,6 +185,7 @@ func getId() (id string) {
 	return
 }
 
+// 更新 rasp 插件和配置
 func updateRasp(info *pb.UpdateInfo) {
 	if info != nil {
 		if info.RaspId != nil {

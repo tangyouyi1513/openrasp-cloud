@@ -14,7 +14,7 @@ type Config struct {
 	LogMaxAge       uint64 `json:"log_max_age"`       // 日志保存最长时间，单位/天
 	LogRotationTime uint64 `json:"log_rotation_time"` // 日志 rotate 间隔，单位/小时
 	LogFileName     string `json:"log_file_name"`
-	HeartbeatDelay  uint64 `json:"heartbeat_dalay"` // 心跳时间间隔，单位/秒
+	HeartbeatDelay  uint64  `json:"heartbeat_dalay"` // 心跳时间间隔，单位/秒
 	HttpPort        string `json:"http_port"`
 	RpcPort         string `json:"rpc_port"`
 	MongoAddress    string `json:"mongo_address"`
@@ -36,7 +36,7 @@ func NewConfig(configMessage string) *Config {
 		LogMaxAge:       7,
 		LogRotationTime: 24,
 		LogFileName:     "openrasp_client.log",
-		HeartbeatDelay:  60,
+		HeartbeatDelay:  5,
 		RpcPort:         "50051",
 		HttpPort:        "8201",
 		MongoAddress:    "localhost:27017",

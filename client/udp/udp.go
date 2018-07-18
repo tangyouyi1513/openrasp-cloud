@@ -5,9 +5,10 @@ import (
 	. "openrasp-cloud/config"
 	log "github.com/sirupsen/logrus"
 	"encoding/json"
+	sum "openrasp-cloud/client/data"
+	"fmt"
 	"openrasp-cloud/proto"
 	"openrasp-cloud/client/grpc"
-	sum "openrasp-cloud/client/data"
 )
 
 func checkError(err error) {
@@ -27,7 +28,9 @@ func handleUDPMsg(conn *net.UDPConn) {
 
 	defer func() {
 		if err := recover(); err != nil {
-			log.WithError(err.(error)).Error("handle UDP message failed")
+			if err, ok := err.(error); ok {
+				log.WithError(err).Error("handle UDP message failed")
+			}
 		}
 	}()
 
@@ -42,11 +45,13 @@ func handleUDPMsg(conn *net.UDPConn) {
 			log.WithError(err).Errorf("decode json failed")
 			return
 		}
-
-		id := data["id"].(string)
+		fmt.Println(string(buf), len(buf))
+		basicInfo := data["info"].(map[string]interface{})
+		id := basicInfo["id"].(string)
 		isNewRasp := false
+		startTime := uint64(basicInfo["start_time"].(float64))
 		if rasp, ok := sum.RaspBasicData[id]; ok {
-			if startTime, ok := data["start_time"]; ok && rasp.StartTime != startTime {
+			if rasp.StartTime != startTime {
 				isNewRasp = true
 			}
 		} else {
@@ -55,12 +60,12 @@ func handleUDPMsg(conn *net.UDPConn) {
 
 		if isNewRasp {
 			rasp := &proto.Rasp{
-				Id:          id,
-				Type:        data["type"].(string),
-				Version:     data["rasp_version"].(string),
-				JavaVersion: data["java_version"].(string),
-				RaspHome:    data["rasp_home"].(string),
-				StartTime:   data["start_time"].(uint64),
+				Id:              id,
+				Type:            basicInfo["type"].(string),
+				Version:         basicInfo["rasp_version"].(string),
+				LanguageVersion: basicInfo["language_version"].(string),
+				RaspHome:        basicInfo["rasp_home"].(string),
+				StartTime:       startTime,
 			}
 
 			response, err := grpc.AddRasp(rasp)
@@ -72,7 +77,8 @@ func handleUDPMsg(conn *net.UDPConn) {
 			}
 		}
 
-		sum.AddData(id, data)
+		sumData := data["sum"].(map[string]interface{})
+		sum.AddData(id, sumData)
 	}
 }
 
