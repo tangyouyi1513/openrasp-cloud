@@ -11,15 +11,16 @@ import (
 type Config struct {
 	RpcAddress      string `json:"rpc_address"`
 	UDPPort         string `json:"udp_port"`
-	LogMaxAge       uint64 `json:"log_max_age"`       // 日志保存最长时间，单位/天
-	LogRotationTime uint64 `json:"log_rotation_time"` // 日志 rotate 间隔，单位/小时
+	LogMaxAge       uint64 `json:"log_max_age"`       // 日志保存最长时间，单位: 天
+	LogRotationTime uint64 `json:"log_rotation_time"` // 日志 rotate 间隔，单位: 小时
 	LogFileName     string `json:"log_file_name"`
-	HeartbeatDelay  uint64  `json:"heartbeat_dalay"` // 心跳时间间隔，单位/秒
+	HeartbeatDelay  uint64 `json:"heartbeat_dalay"` // 心跳时间间隔，单位: 秒
 	HttpPort        string `json:"http_port"`
 	RpcPort         string `json:"rpc_port"`
 	MongoAddress    string `json:"mongo_address"`
 	MongoUser       string `json:"mongo_user"`
 	MongoPassword   string `json:"mongo_password"`
+	MongoAuthDB     string `json:"mongo_auth_db"` // 用于验证的 mongo 链接的数据库，默认 admin
 	Token           string `json:"token"`
 }
 
@@ -40,6 +41,7 @@ func NewConfig(configMessage string) *Config {
 		RpcPort:         "50051",
 		HttpPort:        "8201",
 		MongoAddress:    "localhost:27017",
+		MongoAuthDB:     "admin",
 		MongoUser:       "",
 		MongoPassword:   "",
 	}

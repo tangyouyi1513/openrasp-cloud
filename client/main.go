@@ -4,12 +4,13 @@ import (
 	"openrasp-cloud/client/udp"
 	"sync"
 	"openrasp-cloud/client/grpc"
+	"openrasp-cloud/logger"
 )
 
 var wg sync.WaitGroup
 
 func main() {
-	//logger.InitLogger()
+	logger.InitLogger()
 	grpc.InitRpc()
 	udp.InitUDP()
 

@@ -22,6 +22,7 @@ import (
 
 const (
 	// 注册失败重试时间间隔
+	Version            = "0.1"
 	registerRetryDelay = 5
 	// 注册失败重试次数
 	registerRetryCount = 100
@@ -42,8 +43,6 @@ func InitRpc() {
 	client = pb.NewOpenRASPClient(conn)
 	register()
 	go startHeartbeat()
-	//wait := make(chan struct{})
-	//<-wait
 }
 
 // agent 注册
@@ -161,7 +160,7 @@ func getAgent() *pb.Agent {
 		log.WithError(err).Error("failed to get hostname, use empty string instead")
 		hostName = ""
 	}
-	return &pb.Agent{HostName: hostName, Os: runtime.GOOS, Id: getId()}
+	return &pb.Agent{HostName: hostName, Os: runtime.GOOS, Id: getId(), Version: Version}
 }
 
 // 通过 mac 地址和当前文件夹得到id

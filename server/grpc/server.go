@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	. "openrasp-cloud/config"
+	"openrasp-cloud/server/mongo"
 )
 
 var raspRpcServer *RaspRpcServer
@@ -21,7 +22,7 @@ func (server *RaspRpcServer) HeartBeat(stream pb.OpenRASP_HeartBeatServer) error
 	for {
 		heartbeatInfo, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("can not read ")
+			log.WithError(err).Error("can not read heartbeat")
 			break
 		}
 		if !isSubscribe {
@@ -37,14 +38,70 @@ func (server *RaspRpcServer) HeartBeat(stream pb.OpenRASP_HeartBeatServer) error
 }
 
 func (*RaspRpcServer) Register(ctx context.Context, agent *pb.Agent) (response *pb.RegistrationResponse, err error) {
-	println(agent.Id)
-	response = &pb.RegistrationResponse{IsSuccess: true, Message: ""}
+	session := mongo.Clone()
+	defer session.Close()
+
+	if agent.Id == "" {
+		response = &pb.RegistrationResponse{IsSuccess: false, Message: "agent id can not be empty"}
+		return
+	}
+	if agent.Version == "" {
+		response = &pb.RegistrationResponse{IsSuccess: false, Message: "agent version can not be empty"}
+		return
+	}
+	if agent.HostName == "" {
+		response = &pb.RegistrationResponse{IsSuccess: false, Message: "agent hostname can not be empty"}
+		return
+	}
+	if agent.Os == "" {
+		response = &pb.RegistrationResponse{IsSuccess: false, Message: "agent OS can not be empty"}
+		return
+	}
+
+	_, mgoErr := session.Upsert("agent", agent, agent)
+	if err != nil {
+		response = &pb.RegistrationResponse{IsSuccess: false, Message: mgoErr.Error()}
+	} else {
+		response = &pb.RegistrationResponse{IsSuccess: true, Message: ""}
+	}
 	return
 }
 
 func (*RaspRpcServer) AddRasp(ctx context.Context, rasp *pb.Rasp) (response *pb.AddRaspResponse, err error) {
-	println(rasp.Id)
-	response = &pb.AddRaspResponse{IsSuccess: true, Message: ""}
+	session := mongo.Clone()
+	defer session.Close()
+
+	if rasp.Id == "" {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: "rasp id can not be empty"}
+		return
+	}
+	if rasp.Version == "" {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: "rasp version can not be empty"}
+		return
+	}
+	if rasp.LanguageVersion == "" {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: "rasp language version can not be empty"}
+		return
+	}
+	if rasp.RaspHome == "" {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: "rasp home can not be empty"}
+		return
+	}
+	if rasp.Type == "" {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: "rasp type can not be empty"}
+		return
+	}
+	if rasp.StartTime == 0 {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: "rasp start time can not be empty"}
+		return
+	}
+
+	_, mgoErr := session.Upsert("rasp", rasp, rasp)
+	if err != nil {
+		response = &pb.AddRaspResponse{IsSuccess: false, Message: mgoErr.Error()}
+	} else {
+		response = &pb.AddRaspResponse{IsSuccess: true, Message: ""}
+	}
 	return
 }
 

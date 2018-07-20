@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"openrasp-cloud/server/grpc"
+	"openrasp-cloud/logger"
 )
 
 func checkError(err error) {
@@ -14,7 +15,7 @@ func checkError(err error) {
 }
 
 func main() {
-	//logger.InitLogger()
+	logger.InitLogger()
 	grpc.InitRpc()
 
 }
